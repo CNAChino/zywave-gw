@@ -28,7 +28,7 @@ class DispatcherWorker(Thread):
         print('Dispatcher Worker Exiting...')
 
     def processEvent(self, event):
-        print('Routing Event: {} {} {} {}'.format(event.timestamp, event.source, event.destination, event.payload))
+        print('Routing Event: timestamp={}, src={}, dest={}, payload={}'.format(event.timestamp, event.source, event.destination, event.payload))
         channel = self._channels[event.destination]
         channel.put(event) 
         # TODO check if thread safe

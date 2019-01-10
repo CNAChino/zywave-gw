@@ -25,15 +25,15 @@ def start():
     dispatcher = Dispatcher()
 
     zwaveEP  = ZwaveEP(dispatcher)
-    #awsIotEP = AWSIotEP(dispatcher)
+    awsIotEP = AWSIotEP(dispatcher)
 
     dispatcher.add_channel('zwave_ep', zwaveEP.inChannel)
-    #eventDispatcher.add_channel('awsiot_ep', awsIotEP.inChannel)
+    dispatcher.add_channel('awsiot_ep', awsIotEP.inChannel)
 
     dispatcher.start()
 
     dispatcher.wait_until_shutdown()
     zwaveEP.wait_until_shutdown()
-    #awsIotEP.wait_until_shutdown()
+    awsIotEP.wait_until_shutdown()
 
     return 0

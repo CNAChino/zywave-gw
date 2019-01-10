@@ -1,17 +1,18 @@
 import unittest, time
 from queue import Queue
 from zwave_ep.zwave_ep import ZwaveEP 
+from awsiot_ep.awsiot_ep import AWSIotEP
 from event_dispatcher.event_dispatcher import Dispatcher
 from event_dispatcher.event_dispatcher import Event
 
 class TestDispatcher(unittest.TestCase):
 
     def test_zwaveep(self):
-        awsQueue = Queue()
         dispatcher = Dispatcher()
         zwaveEP  = ZwaveEP(dispatcher)
+        awsIotEP = AWSIotEP(dispatcher)
 
-        dispatcher.add_channel('awsiot_ep', awsQueue)
+        dispatcher.add_channel('awsiot_ep', awsIotEP.inChannel)
         dispatcher.add_channel('zwave_ep', zwaveEP.inChannel)
         dispatcher.start()
 
@@ -23,12 +24,13 @@ class TestDispatcher(unittest.TestCase):
 
         dispatcher.add_event(event)
 
-        e = awsQueue.get()
-        self.assertEqual(e.destination, 'awsiot_ep') 
-        self.assertEqual(e.payload, 'count = 1')
+        time.sleep(1)
 
         dispatcher.stop()
         zwaveEP.stop()
+
+        self.assertEqual(zwaveEP.dailyEventCount(), 1)
+        self.assertEqual(awsIotEP.dailyEventCount(), 1)
 
         dispatcher.wait_until_shutdown()
         zwaveEP.wait_until_shutdown()

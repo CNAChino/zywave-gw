@@ -3,6 +3,7 @@ from queue import Queue
 from threading import Thread
 
 _SHUTDOWN = False
+_dailyEventCount = 0
 
 class ZwaveEPWorker(Thread):
     def __init__(self, queue, dispatcher):
@@ -15,6 +16,7 @@ class ZwaveEPWorker(Thread):
         self.start()
 
     def run(self):
+        global _SHUTDOWN
         print('ZwaveEPWorker:  running')
         while True:
             if _SHUTDOWN:
@@ -26,8 +28,10 @@ class ZwaveEPWorker(Thread):
             self.processEvent(event)
 
     def processEvent(self, event):
+        global _dailyEventCount
         event.destination = 'awsiot_ep'
         self._dispatcher.add_event(event)
+        _dailyEventCount += 1
 
 
 class ZwaveEP():
@@ -49,10 +53,15 @@ class ZwaveEP():
         print('ZwaveEP: threads finished exiting...')
 
     def stop(self):
+        global _SHUTDOWN
         print('ZwaveEP: Stopping DispatcherTP')
         _SHUTDOWN = True
         for t in self._threads:
             self.inChannel.put(None)
+
+    def dailyEventCount(self):
+        global _dailyEventCount
+        return _dailyEventCount
 
     @property
     def inChannel(self):
