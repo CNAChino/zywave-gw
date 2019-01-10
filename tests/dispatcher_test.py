@@ -20,7 +20,7 @@ class TestDispatcher(unittest.TestCase):
         event.timestamp = time.time()
         event.source = 'zwave_net_id'
         event.destination = 'zwave_ep'
-        event.payload = 'count = {}'.format(1)
+        event.payload = 'LIGHT-ON'
 
         dispatcher.add_event(event)
 

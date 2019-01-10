@@ -1,6 +1,7 @@
 from rx import Observable, Observer
 from queue import Queue
 from threading import Thread
+from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 
 _SHUTDOWN = False
 _dailyEventCount = 0
@@ -14,6 +15,22 @@ class AWSIotEPWorker(Thread):
         self.running = True
         self._dispatcher = dispatcher
         self.start()
+        self._awsIotClient = self.setupAwsIotClient()
+
+    def setupAwsIotClient(self):
+        myMQTTClient = AWSIoTMQTTClient("MyPythonMQTTPub")
+        myMQTTClient.configureEndpoint("a352k6gnga96jt-ats.iot.us-west-2.amazonaws.com", 8883)
+        myMQTTClient.configureCredentials("./AmazonRootCA1.pem.txt", "./f282b8b2a8-private.pem.key", "./f282b8b2a8-certificate.pem.crt")
+        myMQTTClient.configureOfflinePublishQueueing(-1)
+        myMQTTClient.configureDrainingFrequency(2)
+        myMQTTClient.configureConnectDisconnectTimeout(10)
+        myMQTTClient.configureMQTTOperationTimeout(5)
+        return myMQTTClient
+
+    def publish(self, payload):
+        self._awsIotClient.connect()
+        self._awsIotClient.publish("myTopic/1", payload, 0)
+        self._awsIotClient.disconnect()
 
     def run(self):
         global _SHUTDOWN
@@ -30,12 +47,13 @@ class AWSIotEPWorker(Thread):
     def processEvent(self, event):
         global _dailyEventCount
         print('TODO send to AWS IOT')
-        # TODO send to AWS IOT
+        self.publish(event.payload)
         _dailyEventCount += 1
 
 
 class AWSIotEP():
-    def __init__(self, dispatcher, num_t = 2):
+    def __init__(self, dispatcher):
+        num_t = 1
         print('Creating AWS IOT Event Processior, with {} threads'.format(num_t))
         self._dispatcher = dispatcher
         self.inChannel = Queue(num_t)
