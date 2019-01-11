@@ -1,23 +1,70 @@
 from queue import Queue
 from threading import Thread
-import time
 
-_SHUTDOWN = False
+_shutdownApp = False
+_eventProcessors = {}
+
+class Dispatcher():
+
+    """
+    Send events to a Event-Processor. First an event is put to queue.  Then a worker (thread) picks up
+    an event from th queue and dispatches to a proper event processor.
+
+    Example Usage:
+        dispatcher = Dispatcher()
+        ...
+        ep1  = EventProcessor1(dispatcher)
+        ep2 = EventProcessor2(dispatcher)
+        ...
+        dispatcher.add_event_processor('zwave_ep', zwaveEP)
+    """
+
+    def __init__(self):
+        self.start()
+
+    def start(self, num_t = 2):
+        print('DispatcherWorker: starting with {} threads'.format(num_t))
+        self._q = Queue(num_t)
+        self._threads = []
+        for _ in range(num_t):
+            self._threads.append(DispatcherWorker(self._q))
+
+    def add_event(self, event):
+        self._q.put(event)
+
+    def wait_until_shutdown(self):
+        print('DispatcherWorker: Waiting on threads to finish')
+        for t in self._threads:
+            t.join()
+        print('DispatcherWorker: threads finished, exiting...')
+
+    def add_event_processor(self, epId, ep):
+        global _eventProcessors
+
+        _eventProcessors[epId] = ep
+
+    def stop(self):
+        print('Stopping DispatcherTP')
+        _SHUTDOWN = True
+        for t in self._threads:
+            self._q.put(None)
+
+
 
 class DispatcherWorker(Thread):
-    def __init__(self, queue, channels):
-        print('Creaeting and Starting DispatcherWorker')
+
+    def __init__(self, queue):
+        print('Creating and Starting DispatcherWorker')
         super(DispatcherWorker, self).__init__()
         self._queue = queue
         self.daemon = True
         self.running = True
-        self._channels = channels
         self.start()
 
     def run(self):
         print('DispatcherWorker: running')
         while True:
-            if _SHUTDOWN:
+            if _shutdownApp:
                 print('DispatcherWorker: shutting down')
                 break;
             event = self._queue.get()
@@ -28,53 +75,9 @@ class DispatcherWorker(Thread):
         print('Dispatcher Worker Exiting...')
 
     def processEvent(self, event):
+        global _eventProcessors
         print('Routing Event: timestamp={}, src={}, dest={}, payload={}'.format(event.timestamp, event.source, event.destination, event.payload))
-        channel = self._channels[event.destination]
-        channel.put(event) 
-        # TODO check if thread safe
-        # routing loging
+        ep = _eventProcessors[event.destination]
+        ep.processEvent(event)
 
 
-class Dispatcher():
-    def __init__(self):
-        self._channels = {}
-        pass
-
-    def start(self, num_t = 2):
-        print('DispatcherWorker: starting with {} threads'.format(num_t))
-        self._q = Queue(num_t)
-        self._threads = []
-        for _ in range(num_t):
-            self._threads.append(DispatcherWorker(self._q, self._channels))
-
-    def add_event(self,event):
-        self._q.put(event)
-
-    def wait_until_shutdown(self):
-        print('DispatcherWorker: Waiting on threads to finish')
-        for t in self._threads:
-            t.join()
-        print('DispatcherWorker: threads finished, exiting...')
-
-    def add_channel(self,channel_id, channel):
-        self._channels[channel_id] = channel
-
-    def stop(self):
-        print('Stopping DispatcherTP')
-        _SHUTDOWN = True
-        for t in self._threads:
-            self._q.put(None)
-
-if __name__ == '__main__':
-    pool = Dispatcher()
-    pool.start()
-    pool.add_channel('zwave_ep', Queue());
-    for i in range(100):
-        event = Event()
-        event.timestamp = time.time()
-        event.source = 'zwave_net_id'
-        event.destination = 'zwave_ep'
-        event.payload = 'count = {}'.format(i)
-        pool.add_event(event)
-    pool.start()
-    pool.wait_complete()
