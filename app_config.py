@@ -1,3 +1,6 @@
+"""
+Application configuration
+"""
 DEBUG = True
 DEBUG_LOG_FILE_PATH = ''
 # NON DEBUG LOGS / ERROR LOGS ARE LOGGED IN SYSLOG

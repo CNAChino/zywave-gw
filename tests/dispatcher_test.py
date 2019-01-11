@@ -1,9 +1,9 @@
 import unittest, time
 from queue import Queue
-from zwave_ep.zwave_ep import ZwaveEP 
-from awsiot_ep.awsiot_ep import AWSIotEP
+from event_processors.zwave_ep import ZwaveEP 
+from event_processors.awsiot_ep import AWSIotEP
 from event_dispatcher.event_dispatcher import Dispatcher
-from event_dispatcher.event_dispatcher import Event
+from models.event import Event
 
 class TestDispatcher(unittest.TestCase):
 
