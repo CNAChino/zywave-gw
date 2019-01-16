@@ -1,4 +1,5 @@
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+from event_dispatcher.event_dispatcher import zywave_dispatcher
 
 _dailyEventCount = 0
 
@@ -10,8 +11,7 @@ class AWSIotEP():
     # onNewZwaveEvent - map / send to AWS IOT
     # onNewAWSIOTEvent - map / send to ZWAVE NETWORK
 
-    def __init__(self, dispatcher):
-        self._dispatcher = dispatcher
+    def __init__(self):
         self._awsIotClient = self.setupAwsIotClient()
 
     def setupAwsIotClient(self):

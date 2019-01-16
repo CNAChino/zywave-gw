@@ -81,3 +81,4 @@ class DispatcherWorker(Thread):
         ep.processEvent(event)
 
 
+zywave_dispatcher = Dispatcher()
