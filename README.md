@@ -5,7 +5,7 @@ Python based application to integrate a zwave / zigbee with AWS IOT.  The main i
 ![TD Image](zyw_appdesign.png)
 
 
-##Version 1.0
+## Version 1.0
 
 The objective is to:
 * Initiate Inclusion and removal from the network via JSON messages from AWS IOT.
