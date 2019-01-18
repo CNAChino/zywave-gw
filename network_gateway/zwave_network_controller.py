@@ -1,20 +1,19 @@
 import time
-import openzwave
 from openzwave.network import ZWaveNetwork
 from openzwave.option import ZWaveOption
 from pydispatch import dispatcher
 from models.event import Event
-from event_dispatcher.event_dispatcher import zywave_dispatcher
+from zywave_queue import main_queue
 
 class ZwaveNetworkController():
     """
     This class is reponsible for starting and communicating with a zwave controller.
     """
 
-    def __init__(self, controllerDevice, config_path="./config", user_path=".", cmd_line=""):
+    def __init__(self):
+        self.is_running = False
 
-        self.is_running = False;
-
+    def start(self, controllerDevice, config_path="./config", user_path=".", cmd_line=""):
         self.options = ZWaveOption(controllerDevice, config_path, user_path, cmd_line)
         self.options.set_log_file("OZW_Log.log")
         self.options.set_append_log_file(False)
@@ -30,24 +29,23 @@ class ZwaveNetworkController():
         dispatcher.connect(self.zwave_value_update, ZWaveNetwork.SIGNAL_VALUE)
 
         self.network = ZWaveNetwork(self.options, autostart=False)
-
-
-
-    def start(self):
         self.network.start()
+
+        #self.is_running is set to True on zwave_network_ready()
 
     def stop(self):
         self.network.stop()
+        self.is_running = False
 
     def send_command(self, command):
-        # SWITCH-SET|node-id|val-id||1 or 0
+        # SWITCH-SET|node-id|val-id||True or False
         print('send_command | {}'.format(command))
         if self.network.is_ready == True:
             fields = command.split("|")
             cCommand = fields[0]
             cNodeId = int(fields[1])
             cValueId = int(fields[2])
-            cVal = True if fields[3] == '1' else False
+            cVal = True if fields[3] == 'True' else False
 
             if cCommand == 'SWITCH-SET':
                 print('switching to {}'.format(cVal))
@@ -77,11 +75,11 @@ class ZwaveNetworkController():
                 zNode = self.network.nodes[node]
                 netReadyEvent = Event()
                 netReadyEvent.timestamp = time.time()
-                netReadyEvent.source = 'zwave-{}|{}'.format(self.network.home_id,zNode.node_id)
-                netReadyEvent.destination = 'zwave_ep'
+                netReadyEvent.source = 'zw_net'
+                netReadyEvent.destination = 'aws_iot'
                 netReadyEvent.payload = "NET-READY|{}|{}|{}".format(zNode.node_id,val,zNode.get_switch_state(val))
-                print('payload = {}'.format(netReadyEvent.payload))
-                zywave_dispatcher.add_event(netReadyEvent)
+                print('to: {}, payload = {}'.format(netReadyEvent.source,netReadyEvent.payload))
+                main_queue.put(netReadyEvent)
 
 
     def zwave_node_update(self, network, node):
@@ -100,10 +98,10 @@ class ZwaveNetworkController():
 
 
 if __name__ == '__main__':
-    zc = ZwaveNetworkController("/dev/cu.usbmodem1411",
-                                config_path="/Users/carlofelicianoaureus/devel/lib/open-zwave/etc/openzwave")
+    zc = ZwaveNetworkController()
 
-    zc.start()
+    zc.start("/dev/cu.usbmodem1411",
+             config_path="/Users/carlofelicianoaureus/devel/lib/open-zwave/etc/openzwave")
 
     time.sleep(5)
 
